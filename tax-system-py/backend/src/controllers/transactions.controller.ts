@@ -17,25 +17,25 @@ export class TransactionsController {
 
       if (startDate) {
         paramCount++;
-        query += \` AND transaction_date >= $\${paramCount}\`;
+        query += ` AND transaction_date >= $${paramCount}`;
         params.push(startDate);
       }
 
       if (endDate) {
         paramCount++;
-        query += \` AND transaction_date <= $\${paramCount}\`;
+        query += ` AND transaction_date <= $${paramCount}`;
         params.push(endDate);
       }
 
       if (type) {
         paramCount++;
-        query += \` AND type = $\${paramCount}\`;
+        query += ` AND type = $${paramCount}`;
         params.push(type);
       }
 
       if (source) {
         paramCount++;
-        query += \` AND source = $\${paramCount}\`;
+        query += ` AND source = $${paramCount}`;
         params.push(source);
       }
 
@@ -58,7 +58,7 @@ export class TransactionsController {
       const netAmount = grossAmount / (1 + ivaRate / 100);
       const ivaAmount = grossAmount - netAmount;
 
-      const query = \`
+      const query = `
         INSERT INTO transactions (
           user_id, transaction_date, type, document_type, document_number,
           ruc_counterpart, dv_counterpart, name_counterpart,
@@ -70,7 +70,7 @@ export class TransactionsController {
           $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12,
           $13, $14, $15, $16, $17, $18, 'MANUAL', $19
         ) RETURNING *
-      \`;
+      `;
 
       const result = await this.db.query(query, [
         req.userId, data.transaction_date, data.type, data.document_type, 
@@ -83,7 +83,7 @@ export class TransactionsController {
         data.description, data.notes, req.userId
       ]);
 
-      logger.info(\`Transacción creada: \${result.rows[0].id}\`);
+      logger.info(`Transacción creada: ${result.rows[0].id}`);
       res.status(201).json(result.rows[0]);
     } catch (error) {
       logger.error('Error al crear transacción:', error);

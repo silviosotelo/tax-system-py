@@ -37,8 +37,8 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
 });
 
 app.listen(PORT, () => {
-  logger.info(\`Servidor iniciado en puerto \${PORT}\`);
-  logger.info(\`Ambiente: \${process.env.NODE_ENV || 'development'}\`);
+  logger.info(`Servidor iniciado en puerto ${PORT}`);
+  logger.info(`Ambiente: ${process.env.NODE_ENV || 'development'}`);
 });
 
 process.on('SIGTERM', () => {
