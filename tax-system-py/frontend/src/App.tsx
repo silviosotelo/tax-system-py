@@ -1,7 +1,12 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, Link } from 'react-router-dom';
 import Dashboard from './components/Dashboard/Dashboard';
 import TransactionsManager from './components/Transactions/Transactionsmanager';
+import IVACalculation from './components/IVA/IVACalculation';
+import IVAHistory from './components/IVA/IVAHistory';
+import IRPCalculation from './components/IRP/IRPCalculation';
+import IRPProjection from './components/IRP/IRPProjection';
+import Settings from './components/Settings/Settings';
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = React.useState(() => {
@@ -17,7 +22,7 @@ function App() {
             e.preventDefault();
             const email = (e.target as any).email.value;
             const password = (e.target as any).password.value;
-            
+
             fetch('http://localhost:3001/api/auth/login', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -28,9 +33,11 @@ function App() {
               if (data.token) {
                 localStorage.setItem('token', data.token);
                 setIsAuthenticated(true);
+              } else {
+                alert('Credenciales inválidas');
               }
             })
-            .catch(err => alert('Error al iniciar sesión'));
+            .catch(err => alert('Error al iniciar sesión: ' + err.message));
           }}>
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
@@ -71,12 +78,21 @@ function App() {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex justify-between h-16">
               <div className="flex space-x-8">
-                <a href="/" className="inline-flex items-center px-1 pt-1 text-sm font-medium text-gray-900">
+                <Link to="/" className="inline-flex items-center px-1 pt-1 text-sm font-medium text-gray-700 hover:text-gray-900">
                   Dashboard
-                </a>
-                <a href="/transactions" className="inline-flex items-center px-1 pt-1 text-sm font-medium text-gray-500 hover:text-gray-900">
+                </Link>
+                <Link to="/transactions" className="inline-flex items-center px-1 pt-1 text-sm font-medium text-gray-500 hover:text-gray-900">
                   Transacciones
-                </a>
+                </Link>
+                <Link to="/iva" className="inline-flex items-center px-1 pt-1 text-sm font-medium text-gray-500 hover:text-gray-900">
+                  IVA
+                </Link>
+                <Link to="/irp" className="inline-flex items-center px-1 pt-1 text-sm font-medium text-gray-500 hover:text-gray-900">
+                  IRP
+                </Link>
+                <Link to="/settings" className="inline-flex items-center px-1 pt-1 text-sm font-medium text-gray-500 hover:text-gray-900">
+                  Configuración
+                </Link>
               </div>
               <button
                 onClick={() => {
@@ -95,6 +111,11 @@ function App() {
           <Routes>
             <Route path="/" element={<Dashboard />} />
             <Route path="/transactions" element={<TransactionsManager />} />
+            <Route path="/iva" element={<IVACalculation />} />
+            <Route path="/iva/history" element={<IVAHistory />} />
+            <Route path="/irp" element={<IRPCalculation />} />
+            <Route path="/irp/projection" element={<IRPProjection />} />
+            <Route path="/settings" element={<Settings />} />
             <Route path="*" element={<Navigate to="/" />} />
           </Routes>
         </main>
