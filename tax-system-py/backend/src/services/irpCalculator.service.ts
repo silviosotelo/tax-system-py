@@ -8,7 +8,7 @@
  */
 
 import { Pool } from 'pg';
-import { logger } from '../utils/logger';
+import logger from '../utils/logger';
 
 interface IRPCalculationResult {
   fiscalYear: number;
