@@ -10,7 +10,7 @@ export function startNotificationJob(db: Pool) {
     logger.info('Verificando vencimientos tributarios');
 
     try {
-      const query = \`
+      const query = `
         SELECT 
           to.*, 
           u.email,
@@ -20,7 +20,7 @@ export function startNotificationJob(db: Pool) {
         WHERE to.status = 'PENDING'
           AND to.due_date >= CURRENT_DATE
           AND to.due_date <= CURRENT_DATE + INTERVAL '7 days'
-      \`;
+      `;
 
       const result = await db.query(query);
 
@@ -38,15 +38,15 @@ export function startNotificationJob(db: Pool) {
         if (existingNotif.rows.length === 0) {
           await notificationService.create({
             user_id: obligation.user_id,
-            type: \`TAX_DUE_\${daysUntil}D\`,
+            type: `TAX_DUE_${daysUntil}D`,
             priority,
-            title: \`Vencimiento \${obligation.tax_type} en \${daysUntil} días\`,
-            message: \`Su obligación de \${obligation.tax_type} vence pronto\`,
+            title: `Vencimiento ${obligation.tax_type} en ${daysUntil} días`,
+            message: `Su obligación de ${obligation.tax_type} vence pronto`,
             related_obligation_id: obligation.id,
             send_email: true
           });
 
-          logger.info(\`Notificación creada para \${obligation.user_id}\`);
+          logger.info(`Notificación creada para ${obligation.user_id}`);
         }
       }
     } catch (error) {

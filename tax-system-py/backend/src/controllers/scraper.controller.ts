@@ -53,7 +53,7 @@ export class ScraperController {
         new Date(periodFrom),
         new Date(periodTo),
         type
-      ).catch(err => {
+      ).catch((err: Error) => {
         logger.error('Error en scraping asíncrono:', err);
       });
 

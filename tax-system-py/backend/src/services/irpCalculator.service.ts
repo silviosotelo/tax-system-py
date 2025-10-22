@@ -25,7 +25,7 @@ interface IRPCalculationResult {
 }
 
 export class IRPCalculatorService {
-  constructor(private db: Pool) {}
+  constructor(private db: Pool) { }
 
   /**
    * Calcula IRP anual según tramos progresivos (Art. 69 Ley 6380/2019)
@@ -70,8 +70,8 @@ export class IRPCalculatorService {
   }
 
   /**
-   * Calcula IRP anual completo
-   */
+     * Calcula IRP anual completo
+     */
   async calculateAnnualIRP(
     userId: string,
     fiscalYear: number
@@ -80,37 +80,57 @@ export class IRPCalculatorService {
       logger.info(`Calculando IRP para ejercicio fiscal ${fiscalYear}`);
 
       const yearStart = new Date(fiscalYear, 0, 1);
-      const yearEnd = new Date(fiscalYear, 11, 31);
+      // const yearEnd = new Date(fiscalYear, 11, 31); // <-- Ya no se usa
 
-      // Consulta de ingresos y gastos
+      // ==================================================================
+      // CORRECCIÓN: Usar la Vista Materializada en lugar de la consulta manual
+      // ==================================================================
       const query = `
         SELECT 
-          SUM(CASE WHEN type = 'INGRESO' THEN net_amount ELSE 0 END) as gross_income,
-          SUM(CASE WHEN type = 'EGRESO' AND is_deductible_irp = true 
-              THEN net_amount ELSE 0 END) as deductible_expenses,
-          jsonb_object_agg(
-            COALESCE(irp_deduction_category, 'sin_categorizar'), 
-            SUM(CASE WHEN type = 'EGRESO' AND is_deductible_irp = true 
-                THEN net_amount ELSE 0 END)
-          ) FILTER (WHERE type = 'EGRESO' AND is_deductible_irp = true) as expenses_by_category
-        FROM transactions
+          gross_income,
+          deductible_expenses,
+          net_income,
+          expenses_by_category
+        FROM mv_annual_irp_summary
         WHERE user_id = $1
-          AND transaction_date >= $2
-          AND transaction_date <= $3
-          AND status = 'REGISTERED'
+          AND fiscal_year = $2;
       `;
 
-      const result = await this.db.query(query, [userId, yearStart, yearEnd]);
+      // Se pasan $1 (userId) y $2 (yearStart, que coincide con el 'fiscal_year' de la vista)
+      const result = await this.db.query(query, [userId, yearStart]);
+
+      // Manejar el caso donde no hay datos para ese año (evita crash en row[0])
+      if (result.rows.length === 0) {
+        logger.warn(`No se encontraron datos en mv_annual_irp_summary para el usuario ${userId} y año ${fiscalYear}`);
+        // Devolver un resultado vacío pero válido
+        const zeroTramos = this.calculateIRPByTramos(0);
+        return {
+          fiscalYear,
+          grossIncome: 0,
+          deductibleExpenses: 0,
+          netIncome: 0,
+          ...zeroTramos,
+          withholdings: 0,
+          taxToPay: 0,
+          expensesByCategory: {}
+        };
+      }
+
       const row = result.rows[0];
 
+      // Se leen los valores directamente de la vista
       const grossIncome = parseFloat(row.gross_income) || 0;
       const deductibleExpenses = parseFloat(row.deductible_expenses) || 0;
-      const netIncome = grossIncome - deductibleExpenses;
+      const netIncome = parseFloat(row.net_income) || 0; // Usamos el net_income pre-calculado
 
-      // Calcular impuesto por tramos
+      // ==================================================================
+      // FIN DE LA CORRECCIÓN
+      // ==================================================================
+
+      // Calcular impuesto por tramos (esto ya estaba bien)
       const tramoCalculation = this.calculateIRPByTramos(netIncome);
 
-      // Consultar retenciones
+      // Consultar retenciones (esto ya estaba bien)
       const withholdingsQuery = `
         SELECT COALESCE(SUM(withholdings_amount), 0) as total_withholdings
         FROM tax_obligations
@@ -174,9 +194,9 @@ export class IRPCalculatorService {
     const avgMonthlyIncome = actualCalculation.grossIncome / monthsElapsed;
     const avgMonthlyExpenses = actualCalculation.deductibleExpenses / monthsElapsed;
 
-    const projectedGrossIncome = 
+    const projectedGrossIncome =
       actualCalculation.grossIncome + (avgMonthlyIncome * monthsRemaining);
-    const projectedExpenses = 
+    const projectedExpenses =
       actualCalculation.deductibleExpenses + (avgMonthlyExpenses * monthsRemaining);
     const projectedNetIncome = projectedGrossIncome - projectedExpenses;
 

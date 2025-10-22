@@ -7,6 +7,7 @@ import IVAHistory from './components/IVA/IVAHistory';
 import IRPCalculation from './components/IRP/IRPCalculation';
 import IRPProjection from './components/IRP/IRPProjection';
 import Settings from './components/Settings/Settings';
+import { authAPI } from './services/api';
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = React.useState(() => {
@@ -18,26 +19,23 @@ function App() {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="bg-white p-8 rounded-lg shadow-md w-96">
           <h1 className="text-2xl font-bold mb-6 text-gray-900">Sistema Tributario PY</h1>
-          <form onSubmit={(e) => {
+          <form onSubmit={async (e) => {
             e.preventDefault();
             const email = (e.target as any).email.value;
             const password = (e.target as any).password.value;
 
-            fetch('http://localhost:3001/api/auth/login', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ email, password })
-            })
-            .then(res => res.json())
-            .then(data => {
-              if (data.token) {
-                localStorage.setItem('token', data.token);
+            try {
+              const response = await authAPI.login(email, password);
+              if (response.data.token) {
+                localStorage.setItem('token', response.data.token);
                 setIsAuthenticated(true);
               } else {
                 alert('Credenciales inválidas');
               }
-            })
-            .catch(err => alert('Error al iniciar sesión: ' + err.message));
+            } catch (error: any) {
+              console.error('Error al iniciar sesión:', error);
+              alert('Error al iniciar sesión: ' + (error.response?.data?.message || error.message));
+            }
           }}>
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>

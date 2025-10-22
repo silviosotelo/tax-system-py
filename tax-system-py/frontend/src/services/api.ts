@@ -29,6 +29,7 @@ api.interceptors.response.use(
 );
 
 export default api;
+export { api };
 
 export const authAPI = {
   login: (email: string, password: string) =>

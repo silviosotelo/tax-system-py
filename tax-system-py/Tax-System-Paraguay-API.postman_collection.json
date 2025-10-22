@@ -1,0 +1,881 @@
+{
+  "info": {
+    "name": "Tax System Paraguay API",
+    "description": "API completa del Sistema de Gestión Tributaria Paraguay\n\nVariables de entorno necesarias:\n- base_url: http://localhost:15001/api\n- token: (se genera automáticamente después del login)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "tax-system-py"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:15001/api",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "user_id",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "🔐 Authentication",
+      "item": [
+        {
+          "name": "Register New User",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.collectionVariables.set('token', jsonData.token);",
+                  "    pm.collectionVariables.set('user_id', jsonData.user.id);",
+                  "    pm.environment.set('token', jsonData.token);",
+                  "    console.log('✅ Usuario registrado y token guardado');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"nuevo@taxsystem.py\",\n  \"password\": \"MiPassword123!\",\n  \"ruc\": \"80012345\",\n  \"dv\": \"6\",\n  \"full_name\": \"Juan Pérez González\",\n  \"business_name\": \"Juan Pérez - Servicios Profesionales\",\n  \"phone\": \"+595981234567\",\n  \"address\": \"Avda. España 1234, Asunción\",\n  \"activity_type\": \"SERVICIOS_PROFESIONALES\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/register",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "register"]
+            },
+            "description": "Registro de nuevo usuario en el sistema.\n\n**Tipos de actividad válidos:**\n- SERVICIOS_PROFESIONALES\n- COMERCIO\n- INDUSTRIA\n- AGROPECUARIO\n- CONSTRUCCION\n- TRANSPORTE\n- OTRO"
+          },
+          "response": [
+            {
+              "name": "Success - Usuario Registrado",
+              "originalRequest": {
+                "method": "POST",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"nuevo@taxsystem.py\",\n  \"password\": \"MiPassword123!\",\n  \"ruc\": \"80012345\",\n  \"dv\": \"6\",\n  \"full_name\": \"Juan Pérez González\"\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/auth/register"
+                }
+              },
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"message\": \"Usuario registrado exitosamente\",\n  \"user\": {\n    \"id\": \"a1b2c3d4-e5f6-7890-abcd-ef1234567890\",\n    \"email\": \"nuevo@taxsystem.py\",\n    \"ruc\": \"80012345\",\n    \"dv\": \"6\",\n    \"full_name\": \"Juan Pérez González\",\n    \"created_at\": \"2025-01-15T10:30:00.000Z\"\n  },\n  \"token\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.collectionVariables.set('token', jsonData.token);",
+                  "    pm.collectionVariables.set('user_id', jsonData.user.id);",
+                  "    pm.environment.set('token', jsonData.token);",
+                  "    console.log('✅ Login exitoso, token guardado');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"demo@taxsystem.py\",\n  \"password\": \"demo123456\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "login"]
+            },
+            "description": "Autenticación de usuario existente. El token JWT se guarda automáticamente."
+          },
+          "response": [
+            {
+              "name": "Success - Login",
+              "originalRequest": {
+                "method": "POST",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"demo@taxsystem.py\",\n  \"password\": \"demo123456\"\n}"
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"message\": \"Autenticación exitosa\",\n  \"user\": {\n    \"id\": \"a1b2c3d4-e5f6-7890-abcd-ef1234567890\",\n    \"email\": \"demo@taxsystem.py\",\n    \"ruc\": \"4895448\",\n    \"dv\": \"9\",\n    \"full_name\": \"SILVIO ANDRES SOTELO\"\n  },\n  \"token\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get Profile",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/auth/profile",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "profile"]
+            },
+            "description": "Obtiene los datos del perfil del usuario autenticado."
+          },
+          "response": [
+            {
+              "name": "Success - Profile",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"id\": \"a1b2c3d4-e5f6-7890-abcd-ef1234567890\",\n  \"email\": \"demo@taxsystem.py\",\n  \"ruc\": \"4895448\",\n  \"dv\": \"9\",\n  \"full_name\": \"SILVIO ANDRES SOTELO\",\n  \"business_name\": null,\n  \"phone\": null,\n  \"address\": null,\n  \"activity_type\": \"SERVICIOS_PROFESIONALES\",\n  \"created_at\": \"2025-01-01T00:00:00.000Z\"\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "📊 Dashboard",
+      "item": [
+        {
+          "name": "Get Dashboard Summary",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/dashboard/summary",
+              "host": ["{{base_url}}"],
+              "path": ["dashboard", "summary"]
+            },
+            "description": "Obtiene el resumen completo del dashboard con IVA actual, IRP proyectado y notificaciones."
+          },
+          "response": [
+            {
+              "name": "Success - Dashboard Summary",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"currentMonth\": {\n    \"period\": \"10/2025\",\n    \"iva\": {\n      \"debitoFiscal\": 15500000,\n      \"creditoFiscal\": 8200000,\n      \"saldoAPagar\": 7300000,\n      \"totalIngresos\": 170500000,\n      \"totalEgresos\": 95000000\n    }\n  },\n  \"currentYear\": {\n    \"year\": 2025,\n    \"irp\": {\n      \"grossIncome\": 1850000000,\n      \"deductibleExpenses\": 920000000,\n      \"netIncome\": 930000000,\n      \"projectedTax\": 78400000\n    }\n  },\n  \"notifications\": {\n    \"unreadCount\": 3\n  },\n  \"nextObligation\": {\n    \"id\": \"abc123\",\n    \"tax_type\": \"IVA\",\n    \"fiscal_period\": \"2025-10-01\",\n    \"due_date\": \"2025-11-25\",\n    \"calculated_tax\": 7300000,\n    \"status\": \"PENDING\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get Chart Data - IVA Trend",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/dashboard/charts?type=iva-trend&months=12",
+              "host": ["{{base_url}}"],
+              "path": ["dashboard", "charts"],
+              "query": [
+                {
+                  "key": "type",
+                  "value": "iva-trend"
+                },
+                {
+                  "key": "months",
+                  "value": "12"
+                }
+              ]
+            },
+            "description": "Obtiene datos históricos de IVA para gráficos de tendencia."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Chart Data - Income vs Expenses",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/dashboard/charts?type=income-expenses&months=6",
+              "host": ["{{base_url}}"],
+              "path": ["dashboard", "charts"],
+              "query": [
+                {
+                  "key": "type",
+                  "value": "income-expenses"
+                },
+                {
+                  "key": "months",
+                  "value": "6"
+                }
+              ]
+            },
+            "description": "Obtiene comparativa de ingresos vs egresos mensuales."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "💰 Transactions",
+      "item": [
+        {
+          "name": "Get All Transactions",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/transactions",
+              "host": ["{{base_url}}"],
+              "path": ["transactions"]
+            },
+            "description": "Lista todas las transacciones del usuario sin filtros."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Transactions - Filtered",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/transactions?startDate=2025-01-01&endDate=2025-12-31&type=EGRESO&source=MANUAL",
+              "host": ["{{base_url}}"],
+              "path": ["transactions"],
+              "query": [
+                {
+                  "key": "startDate",
+                  "value": "2025-01-01",
+                  "description": "Fecha inicio (YYYY-MM-DD)"
+                },
+                {
+                  "key": "endDate",
+                  "value": "2025-12-31",
+                  "description": "Fecha fin (YYYY-MM-DD)"
+                },
+                {
+                  "key": "type",
+                  "value": "EGRESO",
+                  "description": "INGRESO | EGRESO"
+                },
+                {
+                  "key": "source",
+                  "value": "MANUAL",
+                  "description": "MANUAL | SCRAPER | IMPORT | API"
+                }
+              ]
+            },
+            "description": "Lista transacciones con filtros opcionales por fecha, tipo y fuente."
+          },
+          "response": []
+        },
+        {
+          "name": "Create Transaction - Egreso (Compra)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"transaction_date\": \"2025-10-20\",\n  \"type\": \"EGRESO\",\n  \"document_type\": \"FACTURA_ELECTRONICA\",\n  \"document_number\": \"001-001-0012345\",\n  \"timbrado\": \"12345678\",\n  \"ruc_counterpart\": \"80012345\",\n  \"dv_counterpart\": \"6\",\n  \"name_counterpart\": \"Proveedor SA\",\n  \"gross_amount\": 1100000,\n  \"iva_rate\": 10,\n  \"iva_deduction_category\": \"oficina_exclusiva\",\n  \"is_deductible_irp\": true,\n  \"irp_deduction_category\": \"gastos_actividad\",\n  \"description\": \"Compra de equipamiento de oficina\",\n  \"notes\": \"Factura pagada en efectivo\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/transactions",
+              "host": ["{{base_url}}"],
+              "path": ["transactions"]
+            },
+            "description": "Crea una transacción de egreso (compra/gasto).\n\n**Categorías IVA más comunes:**\n- oficina_exclusiva (100% deducible)\n- salud_personal (100% deducible)\n- capacitacion (100% deducible)\n- servicios_mixtos (50% deducible)\n- alimentos_bebidas (30% deducible)"
+          },
+          "response": [
+            {
+              "name": "Success - Transaction Created",
+              "status": "Created",
+              "code": 201,
+              "body": "{\n  \"id\": \"tx-abc-123\",\n  \"user_id\": \"user-123\",\n  \"transaction_date\": \"2025-10-20\",\n  \"type\": \"EGRESO\",\n  \"document_number\": \"001-001-0012345\",\n  \"gross_amount\": 1100000,\n  \"iva_amount\": 100000,\n  \"net_amount\": 1000000,\n  \"creditable_iva_amount\": 100000,\n  \"created_at\": \"2025-10-22T10:30:00.000Z\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Create Transaction - Ingreso (Venta)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"transaction_date\": \"2025-10-21\",\n  \"type\": \"INGRESO\",\n  \"document_type\": \"FACTURA_ELECTRONICA\",\n  \"document_number\": \"001-001-0000234\",\n  \"timbrado\": \"87654321\",\n  \"ruc_counterpart\": \"80098765\",\n  \"dv_counterpart\": \"4\",\n  \"name_counterpart\": \"Cliente Ejemplo SRL\",\n  \"gross_amount\": 5500000,\n  \"iva_rate\": 10,\n  \"description\": \"Servicios profesionales - Asesoría técnica\",\n  \"notes\": \"Pago recibido por transferencia bancaria\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/transactions",
+              "host": ["{{base_url}}"],
+              "path": ["transactions"]
+            },
+            "description": "Crea una transacción de ingreso (venta/servicio facturado)."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Transaction",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/transactions/:id",
+              "host": ["{{base_url}}"],
+              "path": ["transactions", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+                }
+              ]
+            },
+            "description": "Elimina una transacción por su ID."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "🧾 IVA",
+      "item": [
+        {
+          "name": "Calculate Monthly IVA",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/iva/2025/10",
+              "host": ["{{base_url}}"],
+              "path": ["iva", "2025", "10"]
+            },
+            "description": "Calcula el IVA para un mes y año específico.\n\n**Retorna:**\n- Débito fiscal (IVA cobrado)\n- Crédito fiscal (IVA deducible)\n- Saldo a pagar\n- Detalle de transacciones"
+          },
+          "response": [
+            {
+              "name": "Success - IVA Calculation",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"period\": \"2025-10-01T00:00:00.000Z\",\n  \"debitoFiscal\": 15500000,\n  \"creditoFiscal\": 8200000,\n  \"saldoIVA\": 7300000,\n  \"totalIngresos\": 170500000,\n  \"totalEgresos\": 95000000,\n  \"qtyIngresos\": 12,\n  \"qtyEgresos\": 28,\n  \"detalleDebito\": [\n    {\n      \"date\": \"2025-10-05\",\n      \"documentNumber\": \"001-001-0000123\",\n      \"counterpart\": \"Cliente ABC SA\",\n      \"amount\": 11000000,\n      \"iva\": 1000000\n    }\n  ],\n  \"detalleCredito\": [\n    {\n      \"date\": \"2025-10-10\",\n      \"documentNumber\": \"001-002-0004567\",\n      \"counterpart\": \"Proveedor XYZ\",\n      \"amount\": 2200000,\n      \"iva\": 200000\n    }\n  ]\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get IVA Trend",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/iva/trend?months=12",
+              "host": ["{{base_url}}"],
+              "path": ["iva", "trend"],
+              "query": [
+                {
+                  "key": "months",
+                  "value": "12",
+                  "description": "Cantidad de meses históricos"
+                }
+              ]
+            },
+            "description": "Obtiene la evolución histórica del IVA para gráficos de tendencia."
+          },
+          "response": []
+        },
+        {
+          "name": "Generate Form 120 Data",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/iva/2025/10/form120",
+              "host": ["{{base_url}}"],
+              "path": ["iva", "2025", "10", "form120"]
+            },
+            "description": "Genera los datos pre-llenados para el Formulario 120 de IVA.\n\n**Uso:** Para facilitar la carga en Marangatu."
+          },
+          "response": [
+            {
+              "name": "Success - Form 120 Data",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"rubro1\": {\n    \"ventas\": 170500000,\n    \"ivaDebito\": 15500000\n  },\n  \"rubro3\": {\n    \"compras\": 95000000,\n    \"ivaCredito\": 8200000,\n    \"comprasDetail\": [\n      {\n        \"fecha\": \"2025-10-10\",\n        \"proveedor\": \"Proveedor XYZ\",\n        \"factura\": \"001-002-0004567\",\n        \"monto\": 2200000,\n        \"iva\": 200000\n      }\n    ]\n  },\n  \"rubro4\": {\n    \"debitoFiscal\": 15500000,\n    \"creditoFiscal\": 8200000,\n    \"saldoAPagar\": 7300000\n  }\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "📑 IRP",
+      "item": [
+        {
+          "name": "Calculate Annual IRP",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/irp/2025",
+              "host": ["{{base_url}}"],
+              "path": ["irp", "2025"]
+            },
+            "description": "Calcula el IRP anual completo con cálculo por tramos progresivos.\n\n**Tramos IRP 2025:**\n- Hasta Gs. 50.000.000 → 8%\n- Gs. 50.000.001 a 150.000.000 → 9%\n- Más de Gs. 150.000.000 → 10%"
+          },
+          "response": [
+            {
+              "name": "Success - IRP Calculation",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"fiscalYear\": 2025,\n  \"grossIncome\": 1850000000,\n  \"deductibleExpenses\": 920000000,\n  \"netIncome\": 930000000,\n  \"tramo1\": {\n    \"base\": 50000000,\n    \"rate\": 8,\n    \"tax\": 4000000\n  },\n  \"tramo2\": {\n    \"base\": 100000000,\n    \"rate\": 9,\n    \"tax\": 9000000\n  },\n  \"tramo3\": {\n    \"base\": 780000000,\n    \"rate\": 10,\n    \"tax\": 78000000\n  },\n  \"totalTax\": 91000000,\n  \"withholdings\": 12600000,\n  \"taxToPay\": 78400000,\n  \"expensesByCategory\": {\n    \"oficina_exclusiva\": 45000000,\n    \"salud_personal\": 18000000,\n    \"capacitacion\": 12000000\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get IRP Projection",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/irp/2025/10/projection",
+              "host": ["{{base_url}}"],
+              "path": ["irp", "2025", "10", "projection"]
+            },
+            "description": "Proyecta el IRP al cierre del año basándose en los datos actuales hasta el mes indicado."
+          },
+          "response": [
+            {
+              "name": "Success - IRP Projection",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"actual\": {\n    \"fiscalYear\": 2025,\n    \"grossIncome\": 1540000000,\n    \"deductibleExpenses\": 766000000,\n    \"netIncome\": 774000000,\n    \"totalTax\": 75900000\n  },\n  \"projected\": {\n    \"fiscalYear\": 2025,\n    \"grossIncome\": 1848000000,\n    \"deductibleExpenses\": 919200000,\n    \"netIncome\": 928800000,\n    \"totalTax\": 91056000\n  },\n  \"monthsElapsed\": 10,\n  \"monthsRemaining\": 2\n}"
+            }
+          ]
+        },
+        {
+          "name": "Generate Form 515 Data",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/irp/2025/form515",
+              "host": ["{{base_url}}"],
+              "path": ["irp", "2025", "form515"]
+            },
+            "description": "Genera los datos pre-llenados para el Formulario 515 de IRP."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "🤖 Web Scraper",
+      "item": [
+        {
+          "name": "Execute Scraping",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"BOTH\",\n  \"periodFrom\": \"2025-09-01\",\n  \"periodTo\": \"2025-09-30\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/scraper/execute",
+              "host": ["{{base_url}}"],
+              "path": ["scraper", "execute"]
+            },
+            "description": "Ejecuta scraping de Marangatu para extraer facturas.\n\n**Tipos:**\n- ISSUED: Solo facturas emitidas (ventas)\n- RECEIVED: Solo facturas recibidas (compras)\n- BOTH: Ambas\n\n**Requisitos:**\n- Credenciales Marangatu configuradas en Settings"
+          },
+          "response": [
+            {
+              "name": "Success - Scraping Started",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"message\": \"Scraping iniciado\",\n  \"sessionId\": \"session-abc-123\",\n  \"status\": \"PENDING\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get Session Status",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/scraper/session/:sessionId",
+              "host": ["{{base_url}}"],
+              "path": ["scraper", "session", ":sessionId"],
+              "variable": [
+                {
+                  "key": "sessionId",
+                  "value": "session-abc-123"
+                }
+              ]
+            },
+            "description": "Consulta el estado de una sesión de scraping en progreso."
+          },
+          "response": [
+            {
+              "name": "Success - Session Status",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"id\": \"session-abc-123\",\n  \"user_id\": \"user-123\",\n  \"scrape_type\": \"BOTH\",\n  \"status\": \"COMPLETED\",\n  \"total_found\": 45,\n  \"total_imported\": 43,\n  \"total_errors\": 2,\n  \"started_at\": \"2025-10-22T10:00:00.000Z\",\n  \"completed_at\": \"2025-10-22T10:05:32.000Z\",\n  \"duration_seconds\": 332\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get Scraping History",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/scraper/history",
+              "host": ["{{base_url}}"],
+              "path": ["scraper", "history"]
+            },
+            "description": "Obtiene el historial de todas las sesiones de scraping del usuario (últimas 50)."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "⚙️ Settings",
+      "item": [
+        {
+          "name": "Get Settings",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/settings",
+              "host": ["{{base_url}}"],
+              "path": ["settings"]
+            },
+            "description": "Obtiene la configuración del sistema del usuario."
+          },
+          "response": [
+            {
+              "name": "Success - Settings",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"id\": \"settings-123\",\n  \"user_id\": \"user-123\",\n  \"marangatu_username\": \"48954489\",\n  \"auto_scrape_enabled\": false,\n  \"auto_scrape_frequency\": \"WEEKLY\",\n  \"email_notifications\": true,\n  \"auto_categorize_enabled\": true,\n  \"default_iva_rate\": 10,\n  \"fiscal_year_start\": 1\n}"
+            }
+          ]
+        },
+        {
+          "name": "Update Settings",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"marangatu_username\": \"48954489\",\n  \"marangatu_password\": \"MiPasswordMarangatu123\",\n  \"auto_scrape_enabled\": true,\n  \"auto_scrape_frequency\": \"WEEKLY\",\n  \"email_notifications\": true,\n  \"set_apikey\": \"tu-api-key-set-aqui\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/settings",
+              "host": ["{{base_url}}"],
+              "path": ["settings"]
+            },
+            "description": "Actualiza la configuración del sistema.\n\n**Nota:** La contraseña de Marangatu se encripta automáticamente antes de guardarse."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "🏥 Health Check",
+      "request": {
+        "auth": {
+          "type": "noauth"
+        },
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/../health",
+          "host": ["{{base_url}}"],
+          "path": ["..", "health"]
+        },
+        "description": "Verifica que el servidor esté funcionando correctamente."
+      },
+      "response": [
+        {
+          "name": "Success - Server Running",
+          "status": "OK",
+          "code": 200,
+          "body": "{\n  \"status\": \"ok\",\n  \"timestamp\": \"2025-10-22T10:30:00.000Z\",\n  \"database\": \"connected\"\n}"
+        }
+      ]
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Script global pre-request",
+          "console.log('🚀 Ejecutando request a:', pm.request.url);"
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Script global de tests",
+          "if (pm.response.code >= 200 && pm.response.code < 300) {",
+          "    console.log('✅ Request exitoso:', pm.response.code);",
+          "} else if (pm.response.code >= 400) {",
+          "    console.log('❌ Error en request:', pm.response.code, pm.response.json());",
+          "}"
+        ]
+      }
+    }
+  ]
+}

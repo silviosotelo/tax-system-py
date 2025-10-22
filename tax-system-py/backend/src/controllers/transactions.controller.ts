@@ -49,6 +49,26 @@ export class TransactionsController {
     }
   }
 
+  async getById(req: AuthRequest, res: Response): Promise<void> {
+    try {
+      const { id } = req.params;
+      const result = await this.db.query(
+        'SELECT * FROM transactions WHERE id = $1 AND user_id = $2',
+        [id, req.userId]
+      );
+
+      if (result.rows.length === 0) {
+        res.status(404).json({ error: 'Transacción no encontrada' });
+        return;
+      }
+
+      res.json(result.rows[0]);
+    } catch (error) {
+      logger.error('Error al obtener transacción:', error);
+      res.status(500).json({ error: 'Error al obtener transacción' });
+    }
+  }
+
   async create(req: AuthRequest, res: Response): Promise<void> {
     try {
       const data: TransactionCreateDTO = req.body;

@@ -3,13 +3,11 @@
  * 
  * Extrae automáticamente facturas emitidas y recibidas desde el Sistema Marangatu
  * usando Puppeteer para automatizar la navegación del navegador.
- * 
- * IMPORTANTE: El scraping puede fallar si la SET cambia la estructura del sitio.
- * Mantener actualizado según versión de Marangatu.
  */
 
 import puppeteer, { Browser, Page } from 'puppeteer';
-import { logger } from '../utils/logger';
+import { Pool } from 'pg';
+import logger from '../utils/logger';
 import { decrypt } from '../utils/encryption';
 
 interface MarangatuCredentials {
@@ -42,7 +40,9 @@ export class MarangatuScraperService {
   private browser: Browser | null = null;
   private page: Page | null = null;
   private readonly baseUrl = 'https://marangatu.set.gov.py';
-  private readonly timeout = 30000; // 30 segundos
+  private readonly timeout = 30000;
+
+  constructor(private db: Pool) {}
 
   /**
    * Inicializa el navegador headless
@@ -50,7 +50,7 @@ export class MarangatuScraperService {
   async initBrowser(): Promise<void> {
     try {
       this.browser = await puppeteer.launch({
-        headless: true, // Cambiar a false para debugging
+        headless: true,
         args: [
           '--no-sandbox',
           '--disable-setuid-sandbox',
@@ -66,7 +66,6 @@ export class MarangatuScraperService {
 
       this.page = await this.browser.newPage();
       
-      // User agent para evitar detección de bot
       await this.page.setUserAgent(
         'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
       );
@@ -89,38 +88,30 @@ export class MarangatuScraperService {
     try {
       logger.info('Iniciando login en Marangatu...');
 
-      // Navegar a página de login
       await this.page.goto(`${this.baseUrl}/eset/login`, {
         waitUntil: 'networkidle2',
         timeout: this.timeout
       });
 
-      // Esperar a que cargue el formulario de login
       await this.page.waitForSelector('#j_username', { timeout: this.timeout });
 
-      // Desencriptar contraseña
       const password = decrypt(credentials.encryptedPassword);
 
-      // Completar formulario
       await this.page.type('#j_username', credentials.username);
       await this.page.type('#j_password', password);
 
-      // Click en botón de login
       await this.page.click('button[type="submit"]');
 
-      // Esperar navegación o mensaje de error
       await this.page.waitForNavigation({ 
         waitUntil: 'networkidle2',
         timeout: this.timeout 
       });
 
-      // Verificar si el login fue exitoso
       const currentUrl = this.page.url();
       
       if (currentUrl.includes('/eset/inicio') || currentUrl.includes('/eset/home')) {
         logger.info('Login exitoso en Marangatu');
         
-        // Tomar screenshot del dashboard para debugging
         await this.page.screenshot({ 
           path: `/tmp/marangatu-dashboard-${Date.now()}.png` 
         });
@@ -128,7 +119,6 @@ export class MarangatuScraperService {
         return true;
       }
 
-      // Verificar si hay mensaje de error
       const errorMessage = await this.page.$eval(
         '.alert-danger, .error-message',
         el => el.textContent
@@ -145,7 +135,6 @@ export class MarangatuScraperService {
     } catch (error) {
       logger.error('Error durante el login:', error);
       
-      // Capturar screenshot del error
       if (this.page) {
         await this.page.screenshot({ 
           path: `/tmp/marangatu-error-${Date.now()}.png` 
@@ -177,16 +166,13 @@ export class MarangatuScraperService {
     try {
       logger.info('Extrayendo facturas emitidas...');
 
-      // Navegar al módulo de comprobantes emitidos
       await this.page.goto(
         `${this.baseUrl}/eset/gestion-comprobantes/comprobantes-emitidos`,
         { waitUntil: 'networkidle2', timeout: this.timeout }
       );
 
-      // Esperar a que cargue el formulario de búsqueda
       await this.page.waitForSelector('#fechaDesde', { timeout: this.timeout });
 
-      // Formatear fechas (DD/MM/YYYY)
       const formatDate = (date: Date) => {
         const day = String(date.getDate()).padStart(2, '0');
         const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -194,22 +180,20 @@ export class MarangatuScraperService {
         return `${day}/${month}/${year}`;
       };
 
-      // Completar fechas
       await this.page.evaluate(() => {
-        (document.querySelector('#fechaDesde') as HTMLInputElement).value = '';
-        (document.querySelector('#fechaHasta') as HTMLInputElement).value = '';
+        const fechaDesde = document.querySelector('#fechaDesde') as HTMLInputElement;
+        const fechaHasta = document.querySelector('#fechaHasta') as HTMLInputElement;
+        if (fechaDesde) fechaDesde.value = '';
+        if (fechaHasta) fechaHasta.value = '';
       });
 
       await this.page.type('#fechaDesde', formatDate(dateFrom));
       await this.page.type('#fechaHasta', formatDate(dateTo));
 
-      // Click en buscar
       await this.page.click('button#btnBuscar');
 
-      // Esperar resultados
       await this.page.waitForTimeout(2000);
 
-      // Verificar si hay resultados
       const noResults = await this.page.$('.no-results, .sin-datos');
       
       if (noResults) {
@@ -218,7 +202,6 @@ export class MarangatuScraperService {
         return result;
       }
 
-      // Extraer datos de la tabla de resultados
       const documents = await this.page.evaluate(() => {
         const rows = Array.from(
           document.querySelectorAll('table#tablaComprobantes tbody tr')
@@ -240,14 +223,12 @@ export class MarangatuScraperService {
         });
       });
 
-      // Procesar y parsear documentos
       for (const doc of documents) {
         try {
           const grossAmount = parseFloat(
             doc.grossAmountStr.replace(/\./g, '').replace(',', '.')
           );
 
-          // Calcular IVA (asumiendo tasa 10%)
           const ivaRate = 10;
           const netAmount = grossAmount / 1.10;
           const ivaAmount = grossAmount - netAmount;
@@ -310,38 +291,33 @@ export class MarangatuScraperService {
     try {
       logger.info('Extrayendo facturas recibidas...');
 
-      // Navegar al módulo de compras a imputar
       await this.page.goto(
         `${this.baseUrl}/eset/declaraciones-informativas/compras-a-imputar`,
         { waitUntil: 'networkidle2', timeout: this.timeout }
       );
 
-      // Esperar el formulario de consulta
       await this.page.waitForSelector('#periodoDesde', { timeout: this.timeout });
 
-      // Formatear período (MM/YYYY)
       const formatPeriod = (date: Date) => {
         const month = String(date.getMonth() + 1).padStart(2, '0');
         const year = date.getFullYear();
         return `${month}/${year}`;
       };
 
-      // Completar períodos
       await this.page.evaluate(() => {
-        (document.querySelector('#periodoDesde') as HTMLInputElement).value = '';
-        (document.querySelector('#periodoHasta') as HTMLInputElement).value = '';
+        const periodoDesde = document.querySelector('#periodoDesde') as HTMLInputElement;
+        const periodoHasta = document.querySelector('#periodoHasta') as HTMLInputElement;
+        if (periodoDesde) periodoDesde.value = '';
+        if (periodoHasta) periodoHasta.value = '';
       });
 
       await this.page.type('#periodoDesde', formatPeriod(dateFrom));
       await this.page.type('#periodoHasta', formatPeriod(dateTo));
 
-      // Click en consultar
       await this.page.click('button#btnConsultar');
 
-      // Esperar resultados
       await this.page.waitForTimeout(3000);
 
-      // Verificar si hay resultados
       const noResults = await this.page.$('.no-results, .sin-datos');
       
       if (noResults) {
@@ -350,7 +326,6 @@ export class MarangatuScraperService {
         return result;
       }
 
-      // Extraer datos de la tabla
       const documents = await this.page.evaluate(() => {
         const rows = Array.from(
           document.querySelectorAll('table#tablaCompras tbody tr')
@@ -374,7 +349,6 @@ export class MarangatuScraperService {
         });
       });
 
-      // Procesar documentos
       for (const doc of documents) {
         try {
           const grossAmount = parseFloat(
@@ -431,25 +405,119 @@ export class MarangatuScraperService {
   }
 
   /**
-   * Extrae tanto facturas emitidas como recibidas
+   * Método principal de scraping
    */
-  async scrapeAll(
+  async scrape(
+    userId: string,
+    username: string,
+    encryptedPassword: string,
     dateFrom: Date,
-    dateTo: Date
-  ): Promise<{
-    issued: ScrapeResult;
-    received: ScrapeResult;
-  }> {
-    logger.info('Iniciando scraping completo de Marangatu...');
+    dateTo: Date,
+    type: 'ISSUED' | 'RECEIVED' | 'BOTH'
+  ): Promise<void> {
+    try {
+      await this.initBrowser();
+      
+      const loginSuccess = await this.login({ username, encryptedPassword });
+      
+      if (!loginSuccess) {
+        throw new Error('Login fallido en Marangatu');
+      }
 
-    const issued = await this.scrapeIssuedInvoices(dateFrom, dateTo);
-    const received = await this.scrapeReceivedInvoices(dateFrom, dateTo);
+      await this.page!.waitForTimeout(2000);
 
-    logger.info(
-      `Scraping completo: ${issued.totalFound} emitidas, ${received.totalFound} recibidas`
-    );
+      let issued: ScrapeResult | undefined;
+      let received: ScrapeResult | undefined;
 
-    return { issued, received };
+      if (type === 'ISSUED' || type === 'BOTH') {
+        issued = await this.scrapeIssuedInvoices(dateFrom, dateTo);
+        
+        // Guardar facturas emitidas en la base de datos
+        if (issued.documents.length > 0) {
+          for (const doc of issued.documents) {
+            await this.saveTransaction(userId, doc, 'INGRESO');
+          }
+        }
+      }
+
+      if (type === 'RECEIVED' || type === 'BOTH') {
+        received = await this.scrapeReceivedInvoices(dateFrom, dateTo);
+        
+        // Guardar facturas recibidas en la base de datos
+        if (received.documents.length > 0) {
+          for (const doc of received.documents) {
+            await this.saveTransaction(userId, doc, 'EGRESO');
+          }
+        }
+      }
+
+      await this.close();
+    } catch (error) {
+      logger.error('Error en scraping:', error);
+      await this.close();
+      throw error;
+    }
+  }
+
+  /**
+   * Guarda una transacción en la base de datos
+   */
+  private async saveTransaction(
+    userId: string,
+    doc: ScrapedDocument,
+    type: 'INGRESO' | 'EGRESO'
+  ): Promise<void> {
+    try {
+      // Verificar si ya existe
+      const existsQuery = `
+        SELECT id FROM transactions 
+        WHERE user_id = $1 
+          AND document_number = $2 
+          AND transaction_date = $3
+      `;
+      const existsResult = await this.db.query(existsQuery, [
+        userId,
+        doc.documentNumber,
+        doc.date
+      ]);
+
+      if (existsResult.rows.length > 0) {
+        logger.info(`Transacción ${doc.documentNumber} ya existe, omitiendo`);
+        return;
+      }
+
+      // Insertar nueva transacción
+      const insertQuery = `
+        INSERT INTO transactions (
+          user_id, transaction_date, type, document_type, document_number,
+          timbrado, ruc_counterpart, dv_counterpart, name_counterpart,
+          gross_amount, iva_rate, iva_amount, net_amount,
+          source, status
+        ) VALUES (
+          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, 'SCRAPER', 'REGISTERED'
+        )
+      `;
+
+      await this.db.query(insertQuery, [
+        userId,
+        doc.date,
+        type,
+        doc.documentType,
+        doc.documentNumber,
+        doc.timbrado,
+        doc.rucCounterpart,
+        doc.dvCounterpart,
+        doc.nameCounterpart,
+        doc.grossAmount,
+        doc.ivaRate,
+        doc.ivaAmount,
+        doc.netAmount
+      ]);
+
+      logger.info(`Transacción ${doc.documentNumber} guardada exitosamente`);
+    } catch (error) {
+      logger.error('Error al guardar transacción:', error);
+    }
   }
 
   /**
@@ -471,68 +539,4 @@ export class MarangatuScraperService {
       logger.info('Navegador cerrado');
     }
   }
-
-  /**
-   * Método principal: ejecuta scraping completo
-   */
-  async executeScraping(
-    credentials: MarangatuCredentials,
-    dateFrom: Date,
-    dateTo: Date,
-    scrapeType: 'ISSUED' | 'RECEIVED' | 'BOTH' = 'BOTH'
-  ): Promise<{
-    success: boolean;
-    issued?: ScrapeResult;
-    received?: ScrapeResult;
-    error?: string;
-  }> {
-    try {
-      // Inicializar navegador
-      await this.initBrowser();
-
-      // Login
-      const loginSuccess = await this.login(credentials);
-      
-      if (!loginSuccess) {
-        throw new Error('Login fallido en Marangatu');
-      }
-
-      // Esperar un poco después del login
-      await this.page!.waitForTimeout(2000);
-
-      let issued: ScrapeResult | undefined;
-      let received: ScrapeResult | undefined;
-
-      // Ejecutar scraping según tipo solicitado
-      if (scrapeType === 'ISSUED' || scrapeType === 'BOTH') {
-        issued = await this.scrapeIssuedInvoices(dateFrom, dateTo);
-      }
-
-      if (scrapeType === 'RECEIVED' || scrapeType === 'BOTH') {
-        received = await this.scrapeReceivedInvoices(dateFrom, dateTo);
-      }
-
-      // Cerrar navegador
-      await this.close();
-
-      return {
-        success: true,
-        issued,
-        received
-      };
-
-    } catch (error) {
-      logger.error('Error en scraping:', error);
-      
-      // Asegurar que el navegador se cierre
-      await this.close();
-
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : String(error)
-      };
-    }
-  }
 }
-
-export default new MarangatuScraperService();
